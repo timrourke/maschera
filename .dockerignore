@@ -1,4 +1,6 @@
 .dockerignore
+.env
+.env.example
 .git
 .gitignore
 .idea

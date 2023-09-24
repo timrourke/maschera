@@ -3,7 +3,64 @@ version: "3.9"
 services:
   app:
     build: .
+    depends_on:
+      - redpanda
+      - redpanda_init
     ports: []
     volumes:
       - .:/srv/maschera
-    environment: []
+    environment:
+      KAFKA_BROKER:
+      KAFKA_TOPIC_PII:
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1" ]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    ports:
+      - "8081:8081"
+      - "8082:8082"
+      - "9092:9092"
+      - "9644:9644"
+      - "19092:19092"
+    command:
+      - "redpanda"
+      - "start"
+      - "--overprovisioned"
+      - "--kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092"
+      - "--advertise-kafka-addr internal://redpanda:9092,external://localhost:19092"
+      - "--smp"
+      - "1"
+      - "--memory"
+      - "1G"
+      - "--reserve-memory"
+      - "0M"
+      - "--node-id"
+      - "0"
+      - "--check=false"
+
+  redpanda_init:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    volumes:
+      - ./docker/redpanda/init-redpanda.sh:/tmp/init-redpanda.sh
+    entrypoint:
+      - "sh"
+      - "-c"
+    command:
+      - "/tmp/init-redpanda.sh"
+    environment:
+      KAFKA_BROKER:
+      KAFKA_TOPIC_PII:
+
+volumes:
+    redpanda-data:
