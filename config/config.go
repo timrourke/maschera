@@ -1,36 +1,68 @@
 package config
 
 import (
-	"github.com/timrourke/maschera/m/v2/app"
-	"github.com/timrourke/maschera/m/v2/log"
-	"go.uber.org/zap"
+	"os"
+	"strings"
 )
 
 type Config interface {
-	App() app.App
+	KafkaBrokers() []string
+	KafkaTopicPII() string
 }
 
 type config struct {
-	logger log.Logger
+	kafkaBrokers  []string
+	kafkaTopicPII string
 }
 
-func (c config) Logger() log.Logger {
-	if c.logger != nil {
-		return c.logger
-	}
-
-	zapLogger, err := zap.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
-
-	c.logger = log.NewLogger(zapLogger)
-
-	return c.logger
+func (c config) KafkaBrokers() []string {
+	return c.kafkaBrokers
 }
 
-func BuildApp() app.App {
-	c := &config{}
+func (c config) KafkaTopicPII() string {
+	return c.kafkaTopicPII
+}
 
-	return app.NewApp(c.Logger())
+func kafkaBrokersFromEnv() []string {
+	v, ok := os.LookupEnv("KAFKA_BROKERS")
+	if !ok {
+		panic("Missing required environment variable KAFKA_BROKERS")
+	}
+
+	brokers := strings.Split(v, ",")
+	if len(brokers) == 0 {
+		panic("Required environment variable KAFKA_BROKERS cannot be empty")
+	}
+
+	brokersTrimmed := make([]string, 0, len(brokers))
+	for _, broker := range brokers {
+		if strings.TrimSpace(broker) == "" {
+			panic("Required environment variable KAFKA_BROKERS cannot contain empty brokers")
+		}
+
+		brokersTrimmed = append(brokersTrimmed, strings.TrimSpace(broker))
+	}
+
+	return brokersTrimmed
+}
+
+func kafkaTopicPIIFromEnv() string {
+	v, ok := os.LookupEnv("KAFKA_TOPIC_PII")
+	if !ok {
+		panic("Missing required environment variable KAFKA_TOPIC_PII")
+	}
+
+	topicTrimmed := strings.TrimSpace(v)
+	if topicTrimmed == "" {
+		panic("Required environment variable KAFKA_TOPIC_PII cannot be empty")
+	}
+
+	return topicTrimmed
+}
+
+func NewConfig() Config {
+	return &config{
+		kafkaBrokers:  kafkaBrokersFromEnv(),
+		kafkaTopicPII: kafkaTopicPIIFromEnv(),
+	}
 }

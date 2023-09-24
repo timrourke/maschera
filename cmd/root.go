@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/timrourke/maschera/m/v2/config"
+	"github.com/timrourke/maschera/m/v2/deps"
 )
 
 var rootCmd = &cobra.Command{
@@ -13,7 +13,7 @@ var rootCmd = &cobra.Command{
 	Short: "maschera is a tool for masking email addresses in streaming data",
 	Long:  "maschera is a tool for masking email addresses in streaming data",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		app := config.BuildApp()
+		app := deps.BuildApp()
 
 		return app.Run()
 	},

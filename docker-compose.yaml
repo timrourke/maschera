@@ -10,7 +10,7 @@ services:
     volumes:
       - .:/srv/maschera
     environment:
-      KAFKA_BROKER:
+      KAFKA_BROKERS:
       KAFKA_TOPIC_PII:
 
   redpanda:
@@ -59,7 +59,7 @@ services:
     command:
       - "/tmp/init-redpanda.sh"
     environment:
-      KAFKA_BROKER:
+      KAFKA_BROKERS:
       KAFKA_TOPIC_PII:
 
 volumes:
