@@ -40,7 +40,7 @@ func (c config) KafkaTopicPII() string {
 func appEnvFromEnv() AppEnv {
 	v, ok := os.LookupEnv("APP_ENV")
 	if !ok {
-		return AppEnvDevelopment
+		panic("Missing required environment variable APP_ENV")
 	}
 
 	switch strings.ToLower(v) {

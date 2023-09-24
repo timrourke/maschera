@@ -8,11 +8,52 @@ import (
 )
 
 func stubValidEnvVars(t *testing.T) {
+	t.Setenv("APP_ENV", "prod")
 	t.Setenv("KAFKA_BROKERS", "broker1,broker2,broker3")
 	t.Setenv("KAFKA_TOPIC_PII", "pii_data")
 }
 
 func TestConfig(t *testing.T) {
+	t.Run("AppEnv", func(t *testing.T) {
+		t.Run("Returns app env from environment variable", func(t *testing.T) {
+			stubValidEnvVars(t)
+
+			c := config.NewConfig()
+
+			Equal(t, config.AppEnvProduction, c.AppEnv())
+		})
+
+		t.Run("Panics if environment variable is missing", func(t *testing.T) {
+			t.Setenv("APP_ENV", "")
+
+			Panicsf(t, func() { config.NewConfig() }, "Missing required environment variable APP_ENV")
+		})
+
+		t.Run("Parses prod", func(t *testing.T) {
+			t.Setenv("APP_ENV", "prod")
+
+			c := config.NewConfig()
+
+			Equal(t, config.AppEnvProduction, c.AppEnv())
+		})
+
+		t.Run("Parses dev", func(t *testing.T) {
+			t.Setenv("APP_ENV", "dev")
+
+			c := config.NewConfig()
+
+			Equal(t, config.AppEnvDevelopment, c.AppEnv())
+		})
+
+		t.Run("Parses dev", func(t *testing.T) {
+			t.Setenv("APP_ENV", "test")
+
+			c := config.NewConfig()
+
+			Equal(t, config.AppEnvTest, c.AppEnv())
+		})
+	})
+
 	t.Run("KafkaBrokers", func(t *testing.T) {
 		t.Run("Returns brokers from environment variable", func(t *testing.T) {
 			stubValidEnvVars(t)
