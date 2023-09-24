@@ -5,14 +5,28 @@ import (
 	"strings"
 )
 
+type AppEnv int64
+
+const (
+	AppEnvDevelopment AppEnv = iota
+	AppEnvProduction
+	AppEnvTest
+)
+
 type Config interface {
+	AppEnv() AppEnv
 	KafkaBrokers() []string
 	KafkaTopicPII() string
 }
 
 type config struct {
+	appEnv        AppEnv
 	kafkaBrokers  []string
 	kafkaTopicPII string
+}
+
+func (c config) AppEnv() AppEnv {
+	return c.appEnv
 }
 
 func (c config) KafkaBrokers() []string {
@@ -21,6 +35,24 @@ func (c config) KafkaBrokers() []string {
 
 func (c config) KafkaTopicPII() string {
 	return c.kafkaTopicPII
+}
+
+func appEnvFromEnv() AppEnv {
+	v, ok := os.LookupEnv("APP_ENV")
+	if !ok {
+		return AppEnvDevelopment
+	}
+
+	switch strings.ToLower(v) {
+	case "dev":
+		return AppEnvDevelopment
+	case "prod":
+		return AppEnvProduction
+	case "test":
+		return AppEnvTest
+	default:
+		panic("Invalid value for environment variable APP_ENV")
+	}
 }
 
 func kafkaBrokersFromEnv() []string {
@@ -62,6 +94,7 @@ func kafkaTopicPIIFromEnv() string {
 
 func NewConfig() Config {
 	return &config{
+		appEnv:        appEnvFromEnv(),
 		kafkaBrokers:  kafkaBrokersFromEnv(),
 		kafkaTopicPII: kafkaTopicPIIFromEnv(),
 	}
