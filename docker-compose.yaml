@@ -10,6 +10,7 @@ services:
     volumes:
       - .:/srv/maschera
     environment:
+      APP_ENV:
       KAFKA_BROKERS:
       KAFKA_TOPIC_PII:
 
