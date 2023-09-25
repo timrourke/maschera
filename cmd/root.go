@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -10,12 +11,14 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "maschera",
-	Short: "maschera is a tool for masking email addresses in streaming data",
-	Long:  "maschera is a tool for masking email addresses in streaming data",
+	Short: "maschera is a tool for masking PII in streaming data",
+	Long:  "maschera is a tool for masking PII in streaming data",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		app := deps.BuildApp()
 
-		return app.Run()
+		ctx := context.Background()
+
+		return app.Run(ctx)
 	},
 }
 

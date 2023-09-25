@@ -17,24 +17,30 @@ type Config interface {
 	AppEnv() AppEnv
 	KafkaBrokers() []string
 	KafkaTopicPII() string
+	PIIMaskerSecret() string
 }
 
 type config struct {
-	appEnv        AppEnv
-	kafkaBrokers  []string
-	kafkaTopicPII string
+	appEnv          AppEnv
+	kafkaBrokers    []string
+	kafkaTopicPII   string
+	piiMaskerSecret string
 }
 
-func (c config) AppEnv() AppEnv {
+func (c *config) AppEnv() AppEnv {
 	return c.appEnv
 }
 
-func (c config) KafkaBrokers() []string {
+func (c *config) KafkaBrokers() []string {
 	return c.kafkaBrokers
 }
 
-func (c config) KafkaTopicPII() string {
+func (c *config) KafkaTopicPII() string {
 	return c.kafkaTopicPII
+}
+
+func (c *config) PIIMaskerSecret() string {
+	return c.piiMaskerSecret
 }
 
 func appEnvFromEnv() AppEnv {
@@ -92,10 +98,25 @@ func kafkaTopicPIIFromEnv() string {
 	return topicTrimmed
 }
 
+func piiMaskerSecretFromEnv() string {
+	v, ok := os.LookupEnv("PII_MASKER_SECRET")
+	if !ok {
+		panic("Missing required environment variable PII_MASKER_SECRET")
+	}
+
+	secretTrimmed := strings.TrimSpace(v)
+	if secretTrimmed == "" {
+		panic("Required environment variable PII_MASKER_SECRET cannot be empty")
+	}
+
+	return secretTrimmed
+}
+
 func NewConfig() Config {
 	return &config{
-		appEnv:        appEnvFromEnv(),
-		kafkaBrokers:  kafkaBrokersFromEnv(),
-		kafkaTopicPII: kafkaTopicPIIFromEnv(),
+		appEnv:          appEnvFromEnv(),
+		kafkaBrokers:    kafkaBrokersFromEnv(),
+		kafkaTopicPII:   kafkaTopicPIIFromEnv(),
+		piiMaskerSecret: piiMaskerSecretFromEnv(),
 	}
 }

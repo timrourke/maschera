@@ -13,6 +13,7 @@ services:
       APP_ENV:
       KAFKA_BROKERS:
       KAFKA_TOPIC_PII:
+      PII_MASKER_SECRET:
 
   redpanda:
     image: docker.redpanda.com/redpandadata/redpanda:latest
