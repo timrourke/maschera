@@ -84,6 +84,7 @@ func (d *deps) KafkaPIIReader() *kafka.Reader {
 
 	d.kafkaPIIReader = kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  d.Config().KafkaBrokers(),
+		GroupID:  d.Config().KafkaConsumerGroupID(),
 		Topic:    d.Config().KafkaTopicPII(),
 		MaxBytes: tenKB,
 	})
@@ -112,6 +113,7 @@ func (d *deps) PIIMasker() pii.Masker {
 
 	d.piiMasker = pii.NewMasker(
 		d.Hasher(),
+		d.Config().JSONFieldsWithPII(),
 		d.KafkaMaskedWriter(),
 		d.KafkaPIIReader(),
 		d.Logger(),

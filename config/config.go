@@ -16,6 +16,7 @@ const (
 
 type Config interface {
 	AppEnv() AppEnv
+	JSONFieldsWithPII() []string
 	KafkaBrokers() []string
 	KafkaConsumerGroupID() string
 	KafkaTopicMasked() string
@@ -25,6 +26,7 @@ type Config interface {
 
 type config struct {
 	appEnv               AppEnv
+	jsonFieldsWithPII    []string
 	kafkaBrokers         []string
 	kafkaConsumerGroupID string
 	kafkaTopicMasked     string
@@ -34,6 +36,10 @@ type config struct {
 
 func (c *config) AppEnv() AppEnv {
 	return c.appEnv
+}
+
+func (c *config) JSONFieldsWithPII() []string {
+	return c.jsonFieldsWithPII
 }
 
 func (c *config) KafkaBrokers() []string {
@@ -70,6 +76,26 @@ func StringFromEnvOrPanic(key string) string {
 	return vTrimmed
 }
 
+func StringSliceFromCommaSeparatedEnvOrPanic(key string) []string {
+	v := StringFromEnvOrPanic(key)
+
+	s := strings.Split(v, ",")
+	if len(s) == 0 {
+		panic(fmt.Sprintf("Required environment variable %s cannot be empty", key))
+	}
+
+	sTrimmed := make([]string, 0, len(s))
+	for _, e := range s {
+		if strings.TrimSpace(e) == "" {
+			panic(fmt.Sprintf("Required environment variable %s cannot contain empty elements", key))
+		}
+
+		sTrimmed = append(sTrimmed, strings.TrimSpace(e))
+	}
+
+	return sTrimmed
+}
+
 func appEnvFromEnv() AppEnv {
 	v := StringFromEnvOrPanic("APP_ENV")
 
@@ -85,24 +111,12 @@ func appEnvFromEnv() AppEnv {
 	}
 }
 
+func jsonFieldsWithPIIFromEnv() []string {
+	return StringSliceFromCommaSeparatedEnvOrPanic("JSON_FIELDS_WITH_PII")
+}
+
 func kafkaBrokersFromEnv() []string {
-	v := StringFromEnvOrPanic("KAFKA_BROKERS")
-
-	brokers := strings.Split(v, ",")
-	if len(brokers) == 0 {
-		panic("Required environment variable KAFKA_BROKERS cannot be empty")
-	}
-
-	brokersTrimmed := make([]string, 0, len(brokers))
-	for _, broker := range brokers {
-		if strings.TrimSpace(broker) == "" {
-			panic("Required environment variable KAFKA_BROKERS cannot contain empty brokers")
-		}
-
-		brokersTrimmed = append(brokersTrimmed, strings.TrimSpace(broker))
-	}
-
-	return brokersTrimmed
+	return StringSliceFromCommaSeparatedEnvOrPanic("KAFKA_BROKERS")
 }
 
 func kafkaConsumerGroupIDFromEnv() string {
@@ -124,6 +138,7 @@ func piiMaskerSecretFromEnv() string {
 func NewConfig() Config {
 	return &config{
 		appEnv:               appEnvFromEnv(),
+		jsonFieldsWithPII:    jsonFieldsWithPIIFromEnv(),
 		kafkaBrokers:         kafkaBrokersFromEnv(),
 		kafkaConsumerGroupID: kafkaConsumerGroupIDFromEnv(),
 		kafkaTopicMasked:     kafkaTopicMaskedFromEnv(),

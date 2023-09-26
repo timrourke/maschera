@@ -9,6 +9,7 @@ import (
 
 func stubValidEnvVars(t *testing.T) {
 	t.Setenv("APP_ENV", "prod")
+	t.Setenv("JSON_FIELDS_WITH_PII", "email,firstName,lastName")
 	t.Setenv("KAFKA_BROKERS", "broker1,broker2,broker3")
 	t.Setenv("KAFKA_CONSUMER_GROUP_ID", "some-consumer-group-id")
 	t.Setenv("KAFKA_TOPIC_MASKED", "masked_data")
@@ -36,6 +37,20 @@ func TestStringFromEnvOrPanic(t *testing.T) {
 	})
 }
 
+func TestStringSliceFromCommaSeparatedEnvOrPanic(t *testing.T) {
+	t.Run("Returns value from environment variable", func(t *testing.T) {
+		t.Setenv("SOME_ENV_VAR", "one,two,three")
+
+		assert.Equal(t, []string{"one", "two", "three"}, config.StringSliceFromCommaSeparatedEnvOrPanic("SOME_ENV_VAR"))
+	})
+
+	t.Run("Trims elements", func(t *testing.T) {
+		t.Setenv("SOME_ENV_VAR", "one , two, three ")
+
+		assert.Equal(t, []string{"one", "two", "three"}, config.StringSliceFromCommaSeparatedEnvOrPanic("SOME_ENV_VAR"))
+	})
+}
+
 func TestConfig(t *testing.T) {
 	t.Run("Exposes config values", func(t *testing.T) {
 		stubValidEnvVars(t)
@@ -43,6 +58,7 @@ func TestConfig(t *testing.T) {
 		c := config.NewConfig()
 
 		assert.Equal(t, config.AppEnvProduction, c.AppEnv())
+		assert.Equal(t, []string{"email", "firstName", "lastName"}, c.JSONFieldsWithPII())
 		assert.Equal(t, []string{"broker1", "broker2", "broker3"}, c.KafkaBrokers())
 		assert.Equal(t, "some-consumer-group-id", c.KafkaConsumerGroupID())
 		assert.Equal(t, "masked_data", c.KafkaTopicMasked())
