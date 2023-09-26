@@ -1,10 +1,10 @@
-package hash_test
+package hasher_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/timrourke/maschera/m/v2/hash"
+	"github.com/timrourke/maschera/m/v2/hasher"
 )
 
 const (
@@ -14,7 +14,7 @@ const (
 )
 
 func TestHmacSha256_Sign(t *testing.T) {
-	result, err := hash.NewSha256(secret).Sign([]byte(message))
+	result, err := hasher.NewSha256(secret).Sign([]byte(message))
 
 	assert.Nil(t, err)
 	assert.Equal(t, expectedHmacSha256, string(result))

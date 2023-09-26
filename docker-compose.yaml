@@ -12,6 +12,7 @@ services:
     environment:
       APP_ENV:
       KAFKA_BROKERS:
+      KAFKA_TOPIC_MASKED:
       KAFKA_TOPIC_PII:
       PII_MASKER_SECRET:
 
@@ -62,6 +63,7 @@ services:
       - "/tmp/init-redpanda.sh"
     environment:
       KAFKA_BROKERS:
+      KAFKA_TOPIC_MASKED:
       KAFKA_TOPIC_PII:
 
 volumes:

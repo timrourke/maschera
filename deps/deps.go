@@ -4,6 +4,7 @@ import (
 	"github.com/segmentio/kafka-go"
 	"github.com/timrourke/maschera/m/v2/app"
 	"github.com/timrourke/maschera/m/v2/config"
+	"github.com/timrourke/maschera/m/v2/hasher"
 	"github.com/timrourke/maschera/m/v2/log"
 	"github.com/timrourke/maschera/m/v2/pii"
 	"go.uber.org/zap"
@@ -12,35 +13,49 @@ import (
 const tenKB = 10e6
 
 type deps struct {
-	cfg            config.Config
-	kafkaPIIReader *kafka.Reader
-	logger         log.Logger
-	piiMasker      pii.Masker
+	cfg               config.Config
+	kafkaPIIReader    *kafka.Reader
+	kafkaMaskedWriter *kafka.Writer
+	logger            log.Logger
+	piiMasker         pii.Masker
+	hasher            hasher.HmacSha256
 }
 
 type Deps interface {
 	Config() config.Config
-	Logger() log.Logger
+	Hasher() hasher.HmacSha256
 	KafkaPIIReader() *kafka.Reader
+	KafkaMaskedWriter() *kafka.Writer
+	Logger() log.Logger
 }
 
-func (c *deps) Config() config.Config {
-	if c.cfg != nil {
-		return c.cfg
+func (d *deps) Config() config.Config {
+	if d.cfg != nil {
+		return d.cfg
 	}
 
-	c.cfg = config.NewConfig()
+	d.cfg = config.NewConfig()
 
-	return c.cfg
+	return d.cfg
 }
 
-func (c *deps) Logger() log.Logger {
-	if c.logger != nil {
-		return c.logger
+func (d *deps) Hasher() hasher.HmacSha256 {
+	if d.hasher != nil {
+		return d.hasher
+	}
+
+	d.hasher = hasher.NewSha256(d.Config().PIIMaskerSecret())
+
+	return d.hasher
+}
+
+func (d *deps) Logger() log.Logger {
+	if d.logger != nil {
+		return d.logger
 	}
 
 	var logFunc func(options ...zap.Option) (*zap.Logger, error)
-	switch c.Config().AppEnv() {
+	switch d.Config().AppEnv() {
 	case config.AppEnvDevelopment:
 		logFunc = zap.NewDevelopment
 		break
@@ -57,23 +72,37 @@ func (c *deps) Logger() log.Logger {
 		panic(err)
 	}
 
-	c.logger = log.NewLogger(zapLogger)
+	d.logger = log.NewLogger(zapLogger)
 
-	return c.logger
+	return d.logger
 }
 
-func (c *deps) KafkaPIIReader() *kafka.Reader {
-	if c.kafkaPIIReader != nil {
-		return c.kafkaPIIReader
+func (d *deps) KafkaPIIReader() *kafka.Reader {
+	if d.kafkaPIIReader != nil {
+		return d.kafkaPIIReader
 	}
 
-	c.kafkaPIIReader = kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  c.Config().KafkaBrokers(),
-		Topic:    c.Config().KafkaTopicPII(),
+	d.kafkaPIIReader = kafka.NewReader(kafka.ReaderConfig{
+		Brokers:  d.Config().KafkaBrokers(),
+		Topic:    d.Config().KafkaTopicPII(),
 		MaxBytes: tenKB,
 	})
 
-	return c.kafkaPIIReader
+	return d.kafkaPIIReader
+}
+
+func (d *deps) KafkaMaskedWriter() *kafka.Writer {
+	if d.kafkaMaskedWriter != nil {
+		return d.kafkaMaskedWriter
+	}
+
+	d.kafkaMaskedWriter = &kafka.Writer{
+		Addr:         kafka.TCP(d.Config().KafkaBrokers()...),
+		Topic:        d.Config().KafkaTopicMasked(),
+		RequiredAcks: kafka.RequireAll,
+	}
+
+	return d.kafkaMaskedWriter
 }
 
 func (d *deps) PIIMasker() pii.Masker {
@@ -81,7 +110,12 @@ func (d *deps) PIIMasker() pii.Masker {
 		return d.piiMasker
 	}
 
-	d.piiMasker = pii.NewMasker(d.Logger(), d.KafkaPIIReader())
+	d.piiMasker = pii.NewMasker(
+		d.Hasher(),
+		d.KafkaMaskedWriter(),
+		d.KafkaPIIReader(),
+		d.Logger(),
+	)
 
 	return d.piiMasker
 }

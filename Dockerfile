@@ -9,4 +9,5 @@ COPY . ./
 
 RUN go build -o /usr/local/bin/maschera
 
-CMD ["/usr/local/bin/maschera"]
+#CMD ["/usr/local/bin/maschera"]
+CMD ["sleep", "infinity"]
