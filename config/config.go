@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strings"
 )
@@ -16,17 +17,19 @@ const (
 type Config interface {
 	AppEnv() AppEnv
 	KafkaBrokers() []string
+	KafkaConsumerGroupID() string
 	KafkaTopicMasked() string
 	KafkaTopicPII() string
 	PIIMaskerSecret() string
 }
 
 type config struct {
-	appEnv           AppEnv
-	kafkaBrokers     []string
-	kafkaTopicMasked string
-	kafkaTopicPII    string
-	piiMaskerSecret  string
+	appEnv               AppEnv
+	kafkaBrokers         []string
+	kafkaConsumerGroupID string
+	kafkaTopicMasked     string
+	kafkaTopicPII        string
+	piiMaskerSecret      string
 }
 
 func (c *config) AppEnv() AppEnv {
@@ -35,6 +38,10 @@ func (c *config) AppEnv() AppEnv {
 
 func (c *config) KafkaBrokers() []string {
 	return c.kafkaBrokers
+}
+
+func (c *config) KafkaConsumerGroupID() string {
+	return c.kafkaConsumerGroupID
 }
 
 func (c *config) KafkaTopicMasked() string {
@@ -49,11 +56,22 @@ func (c *config) PIIMaskerSecret() string {
 	return c.piiMaskerSecret
 }
 
-func appEnvFromEnv() AppEnv {
-	v, ok := os.LookupEnv("APP_ENV")
+func StringFromEnvOrPanic(key string) string {
+	v, ok := os.LookupEnv(key)
 	if !ok {
-		panic("Missing required environment variable APP_ENV")
+		panic(fmt.Sprintf("Missing required environment variable %s", key))
 	}
+
+	vTrimmed := strings.TrimSpace(v)
+	if vTrimmed == "" {
+		panic(fmt.Sprintf("Required environment variable %s cannot be empty", key))
+	}
+
+	return vTrimmed
+}
+
+func appEnvFromEnv() AppEnv {
+	v := StringFromEnvOrPanic("APP_ENV")
 
 	switch strings.ToLower(v) {
 	case "dev":
@@ -68,10 +86,7 @@ func appEnvFromEnv() AppEnv {
 }
 
 func kafkaBrokersFromEnv() []string {
-	v, ok := os.LookupEnv("KAFKA_BROKERS")
-	if !ok {
-		panic("Missing required environment variable KAFKA_BROKERS")
-	}
+	v := StringFromEnvOrPanic("KAFKA_BROKERS")
 
 	brokers := strings.Split(v, ",")
 	if len(brokers) == 0 {
@@ -90,54 +105,29 @@ func kafkaBrokersFromEnv() []string {
 	return brokersTrimmed
 }
 
+func kafkaConsumerGroupIDFromEnv() string {
+	return StringFromEnvOrPanic("KAFKA_CONSUMER_GROUP_ID")
+}
+
 func kafkaTopicMaskedFromEnv() string {
-	v, ok := os.LookupEnv("KAFKA_TOPIC_MASKED")
-	if !ok {
-		panic("Missing required environment variable KAFKA_TOPIC_MASKED")
-	}
-
-	topicTrimmed := strings.TrimSpace(v)
-	if topicTrimmed == "" {
-		panic("Required environment variable KAFKA_TOPIC_MASKED cannot be empty")
-	}
-
-	return topicTrimmed
+	return StringFromEnvOrPanic("KAFKA_TOPIC_MASKED")
 }
 
 func kafkaTopicPIIFromEnv() string {
-	v, ok := os.LookupEnv("KAFKA_TOPIC_PII")
-	if !ok {
-		panic("Missing required environment variable KAFKA_TOPIC_PII")
-	}
-
-	topicTrimmed := strings.TrimSpace(v)
-	if topicTrimmed == "" {
-		panic("Required environment variable KAFKA_TOPIC_PII cannot be empty")
-	}
-
-	return topicTrimmed
+	return StringFromEnvOrPanic("KAFKA_TOPIC_PII")
 }
 
 func piiMaskerSecretFromEnv() string {
-	v, ok := os.LookupEnv("PII_MASKER_SECRET")
-	if !ok {
-		panic("Missing required environment variable PII_MASKER_SECRET")
-	}
-
-	secretTrimmed := strings.TrimSpace(v)
-	if secretTrimmed == "" {
-		panic("Required environment variable PII_MASKER_SECRET cannot be empty")
-	}
-
-	return secretTrimmed
+	return StringFromEnvOrPanic("PII_MASKER_SECRET")
 }
 
 func NewConfig() Config {
 	return &config{
-		appEnv:           appEnvFromEnv(),
-		kafkaBrokers:     kafkaBrokersFromEnv(),
-		kafkaTopicMasked: kafkaTopicMaskedFromEnv(),
-		kafkaTopicPII:    kafkaTopicPIIFromEnv(),
-		piiMaskerSecret:  piiMaskerSecretFromEnv(),
+		appEnv:               appEnvFromEnv(),
+		kafkaBrokers:         kafkaBrokersFromEnv(),
+		kafkaConsumerGroupID: kafkaConsumerGroupIDFromEnv(),
+		kafkaTopicMasked:     kafkaTopicMaskedFromEnv(),
+		kafkaTopicPII:        kafkaTopicPIIFromEnv(),
+		piiMaskerSecret:      piiMaskerSecretFromEnv(),
 	}
 }

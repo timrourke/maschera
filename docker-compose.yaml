@@ -12,6 +12,7 @@ services:
     environment:
       APP_ENV:
       KAFKA_BROKERS:
+      KAFKA_CONSUMER_GROUP_ID:
       KAFKA_TOPIC_MASKED:
       KAFKA_TOPIC_PII:
       PII_MASKER_SECRET:
